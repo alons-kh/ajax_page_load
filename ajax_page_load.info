@@ -1,0 +1,7 @@
+name = Ajax page load with progress bar
+description = Ajax page load with progress bar.
+dependencies[] = libraries
+package = User interface
+core = 7.x
+
+configure = admin/config/user-interface/ajax-page-load

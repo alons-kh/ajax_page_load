@@ -1,0 +1,11 @@
+body.load {
+  opacity: 0.1;
+}
+#nprogress div.bar {
+  z-index: 1000;
+  height: 4px;
+}
+
+#nprogress div.spinner {
+  z-index: 1000;
+}

@@ -1,0 +1,212 @@
+<?php
+
+/**
+ * @file
+ * Change content without reloading page with progress bar.
+ */
+
+/**
+ * Implements hook_page_build().
+ */
+function ajax_page_load_page_build(&$page) {
+  // Adding css files to page.
+  $css_files = array(
+    libraries_get_path('nprogress') . '/nprogress.css',
+    drupal_get_path('module', 'ajax_page_load') . '/css/ajax_page_load.css',
+  );
+  foreach ($css_files as $file_path) {
+    $page['header']['#attached']['css'][] = array(
+      'data' => $file_path,
+      'type' => 'file',
+      'options' => array(
+        'preprocess' => TRUE,
+        'every_page' => TRUE,
+      ),
+    );
+  }
+  // Adding js settings to page.
+  $default_template = '<div class="bar" role="bar"><div class="peg"></div></div><div class="spinner" role="spinner"><div class="spinner-icon"></div></div>';
+  $default_plugin_settings = array(
+    'template' => $default_template,
+    'easing' => 'ease',
+    'speed' => 200,
+    'parent' => 'body',
+    'showSpinner' => 1,
+  );
+  $settings = array(
+    'links' => variable_get('ajax_page_load_links', 'ul.menu a'),
+    'contentSelector' => variable_get('ajax_page_load_content_selector', '#main'),
+    'opacity' => variable_get('ajax_page_load_content_opacity', '0.7'),
+    'pluginSettings' => variable_get('ajax_page_load_plugin', $default_plugin_settings),
+  );
+  $page['header']['#attached']['js'][] = array(
+    'data' => array('ajax_page_load' => $settings),
+    'type' => 'setting',
+    'options' => array(
+      'preprocess' => TRUE,
+      'every_page' => TRUE,
+    ),
+  );
+  // Adding js files to page.
+  $js_files = array(
+    libraries_get_path('nprogress') . '/nprogress.js',
+    drupal_get_path('module', 'ajax_page_load') . '/js/ajax_page_load.js', array('scope' => 'footer'),
+  );
+  foreach ($js_files as $file_path) {
+    $page['header']['#attached']['js'][] = array(
+      'data' => $file_path,
+      'type' => 'file',
+      'options' => array(
+        'preprocess' => TRUE,
+        'every_page' => TRUE,
+      ),
+    );
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function ajax_page_load_menu() {
+  $items['admin/config/user-interface/ajax-page-load'] = array(
+    'title' => 'Configure "Ajax page load with progress bar"',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ajax_page_load_admin_form'),
+    'access arguments' => array('administer Ajax Page Load settings'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function ajax_page_load_permission() {
+  return array(
+    'administer Ajax Page Load settings' => array(
+      'title' => t('Administer Ajax Page Load settings'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_help().
+ */
+function ajax_page_load_help($path, $arg) {
+  if ($path == 'admin/help#ajax_page_load') {
+    $output = t('Module allows load page content without reloading the page
+    with progress bar');
+    return $output;
+  }
+}
+
+/**
+ * Callback for admin form.
+ */
+function ajax_page_load_admin_form($form, &$form_state) {
+  ajax_page_load_check_library();
+  $form['ajax_page_load_links'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter selector for links'),
+    '#default_value' => variable_get('ajax_page_load_links', 'ul.menu a'),
+    '#description' => t('Example: ul.menu a, a.some-class'),
+  );
+  $form['ajax_page_load_content_selector'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter selector for content area which will be replaced'),
+    '#default_value' => variable_get('ajax_page_load_content_selector', '#main'),
+    '#description' => t('Example: #main (for Bartik theme)'),
+  );
+  $form['additional_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Additional settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['additional_settings']['ajax_page_load_content_opacity'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Opacity'),
+    '#default_value' => variable_get('ajax_page_load_content_opacity', '0.7'),
+    '#description' => t('Settings opacity while loading content.'),
+  );
+  $form['additional_settings']['ajax_page_load_plugin'] = array(
+    '#tree' => TRUE,
+  );
+  $default_template = '<div class="bar" role="bar"><div class="peg"></div></div><div class="spinner" role="spinner"><div class="spinner-icon"></div></div>';
+  $default_plugin_settings = array(
+    'template' => $default_template,
+    'easing' => 'ease',
+    'speed' => 200,
+    'parent' => 'body',
+    'showSpinner' => 1,
+  );
+  $plugin_settings = variable_get('ajax_page_load_plugin', $default_plugin_settings);
+  $form['additional_settings']['ajax_page_load_plugin']['template'] = array(
+    '#type' => 'textarea',
+    '#rows' => 2,
+    '#title' => t('Template'),
+    '#default_value' => $plugin_settings['template'],
+    '#description' => t("You can change the markup using template. To keep the progress bar working, keep an element with role='bar' in there."),
+  );
+  $form['additional_settings']['ajax_page_load_plugin']['easing'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Easing'),
+    '#default_value' => $plugin_settings['easing'],
+    '#description' => t('Adjust animation settings using easing.'),
+  );
+  $form['additional_settings']['ajax_page_load_plugin']['speed'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Speed'),
+    '#default_value' => $plugin_settings['speed'],
+    '#description' => t('Adjust animation settings using speed.'),
+  );
+  $form['additional_settings']['ajax_page_load_plugin']['parent'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Parent'),
+    '#default_value' => $plugin_settings['parent'],
+    '#description' => t('Specify this to change the parent container.'),
+  );
+  $form['additional_settings']['ajax_page_load_plugin']['showSpinner'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show Spinner'),
+    '#default_value' => $plugin_settings['showSpinner'],
+    '#description' => t('Uncheck it to turn off loading spinner.'),
+  );
+  return system_settings_form($form);
+}
+
+/**
+ * Checking the existence of jQuery nprogress library.
+ */
+function ajax_page_load_check_library() {
+  if (!_ajax_page_load_library_path()) {
+    $options = array('attributes' => array('target' => '_blank'));
+    $path = 'http://ricostacruz.com/nprogress/';
+    $url = l($path, $path, $options);
+    $message = t('You need to install the jQuery nprogress plugin. Create a directory in sites/all/libraries called nprogress, and then copy nprogress.js into it. You can find the plugin at !url.', array('!url' => $url));
+    drupal_set_message($message, 'error');
+  }
+}
+
+/**
+ * Gets the path to the jQuery nprogress library.
+ *
+ * @return bool|string
+ *   path to nprogress.js or FALSE
+ */
+function _ajax_page_load_library_path() {
+  $cycle_path = libraries_get_path('nprogress');
+
+  if (!empty($cycle_path)) {
+    if (file_exists($cycle_path . '/nprogress.js')) {
+      $cycle_path .= '/nprogress.js';
+    }
+    else {
+      $cycle_path = FALSE;
+    }
+  }
+  else {
+    $cycle_path = FALSE;
+  }
+  return $cycle_path;
+}

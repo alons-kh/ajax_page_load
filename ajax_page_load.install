@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * @file
+ * A ajax_page_load.install file is run the first time a module is enabled.
+ */
+
+/**
+ * Implements hook_enable().
+ */
+function ajax_page_load_enable() {
+  ajax_page_load_check_library();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function ajax_page_load_uninstall() {
+  variable_del('ajax_page_load_links');
+  variable_del('ajax_page_load_content_selector');
+  variable_del('ajax_page_load_content_opacity');
+}
